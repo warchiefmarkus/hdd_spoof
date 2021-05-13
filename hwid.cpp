@@ -26,7 +26,7 @@
 #include <ntdddisk.h>
 #include <intrin.h>
 #include "defs.h"
-
+#include <windef.h>
 #include <random>
 
 #define	DUMP(level, lpszFormat, ...)	switch(level)	\
@@ -44,6 +44,16 @@ PDRIVER_DISPATCH g_original_device_control;
 unsigned long long g_startup_time;
 
 #define  DFP_GET_VERSION          0x00074080
+
+typedef struct _GETVERSIONOUTPARAMS
+{
+	BYTE bVersion;      // Binary driver version.
+	BYTE bRevision;     // Binary driver revision.
+	BYTE bReserved;     // Not used.
+	BYTE bIDEDeviceMap; // Bit map of IDE devices.
+	DWORD fCapabilities; // Bit mask of driver capabilities.
+	DWORD dwReserved[4]; // For future use.
+} GETVERSIONOUTPARAMS, * PGETVERSIONOUTPARAMS, * LPGETVERSIONOUTPARAMS;
 
 // SPOOF SERIAL
 void spoof_serial(char* serial, bool is_smart);
@@ -253,28 +263,37 @@ void do_completion_hook(PIRP irp, PIO_STACK_LOCATION ioc, PIO_COMPLETION_ROUTINE
 	ioc->CompletionRoutine = routine;
 }
 
+// HOOK DEVICE
 NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 {
 	const auto ioc = IoGetCurrentIrpStackLocation(irp);
 
 	switch (ioc->Parameters.DeviceIoControl.IoControlCode)
 	{
+
 	case IOCTL_STORAGE_QUERY_PROPERTY:
 	{
 		const auto query = (PSTORAGE_PROPERTY_QUERY)irp->AssociatedIrp.SystemBuffer;
 
 		if (query->PropertyId == StorageDeviceProperty)
 			do_completion_hook(irp, ioc, &completed_storage_query);
+		break;
 	}
-	break;
+	
+
 	case SMART_RCV_DRIVE_DATA:
+	{
 		do_completion_hook(irp, ioc, &completed_smart);
 		break;
+	}
 
 	case DFP_GET_VERSION:
+	{
 		g_original_device_control(device_object, irp);
-		DUMP(INF, "[DFP_GET_VERSION] - SystemBuffer: %s", ((REQUEST_STRUCT*)(ioc->Context))->SystemBuffer);
+		DUMP(INF, "[DFP_GET_VERSION] - SystemBuffer->bVersion: %x", ((GETVERSIONOUTPARAMS*)(((REQUEST_STRUCT*)(ioc->Context))->SystemBuffer))->bVersion);
 		break;
+	}
+
 	default:
 		break;
 	}
@@ -351,9 +370,9 @@ NTSTATUS EntryPoint(
 
 
 	//n_disk::disable_smart();
-	change_disk_serials();
+	// change_disk_serials();
 	//n_disk::fuck_dispatch();
-	start_hook();
+	// start_hook();
 
 	return STATUS_SUCCESS;
 }
