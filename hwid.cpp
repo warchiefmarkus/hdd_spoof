@@ -90,7 +90,7 @@ void spoof_param(char* param, const char* newValue, bool swap)
 	//printf("\nSwapped: %s\n", swaped);
 	for (int i = 0; i < lenStr + 1; i++)
 		param[i] = swaped[i];
-	ExFreePoolWithTag(swaped,0);
+	ExFreePoolWithTag(swaped, 0);
 }
 
 struct REQUEST_STRUCT
@@ -109,7 +109,7 @@ NTSTATUS completed_storage_query(
 {
 	if (!context)
 	{
-		DUMP(INF,"%s %d : Context was nullptr\n", __FUNCTION__, __LINE__);
+		DUMP(INF, "%s %d : Context was nullptr\n", __FUNCTION__, __LINE__);
 		return STATUS_SUCCESS;
 	}
 
@@ -128,7 +128,7 @@ NTSTATUS completed_storage_query(
 
 		if (buffer->SerialNumberOffset == 0)
 		{
-			DUMP(INF,"%s %d : Device doesn't have unique ID\n", __FUNCTION__, __LINE__);
+			DUMP(INF, "%s %d : Device doesn't have unique ID\n", __FUNCTION__, __LINE__);
 			break;
 		}
 
@@ -137,7 +137,7 @@ NTSTATUS completed_storage_query(
 			|| buffer->SerialNumberOffset >= buffer_length
 			)
 		{
-			DUMP(INF,"%s %d : Malformed buffer (should never happen) size: %d\n", __FUNCTION__, __LINE__, buffer_length);
+			DUMP(INF, "%s %d : Malformed buffer (should never happen) size: %d\n", __FUNCTION__, __LINE__, buffer_length);
 		}
 		else
 		{
@@ -147,7 +147,7 @@ NTSTATUS completed_storage_query(
 			DUMP(INF, "%s %d : Serial: %s\n", __FUNCTION__, __LINE__, serial);
 			spoof_param(product, "Samsung", false);
 			spoof_serial(serial, false);
-			DUMP(INF, "%s %d : Product Modified: %s\n", __FUNCTION__, __LINE__, product);			
+			DUMP(INF, "%s %d : Product Modified: %s\n", __FUNCTION__, __LINE__, product);
 			DUMP(INF, "%s %d : Serial Modified: %s\n", __FUNCTION__, __LINE__, serial);
 		}
 	} while (false);
@@ -170,7 +170,7 @@ NTSTATUS completed_smart(
 
 	if (!context)
 	{
-		DUMP(INF,"%s %d : Context was nullptr\n", __FUNCTION__, __LINE__);
+		DUMP(INF, "%s %d : Context was nullptr\n", __FUNCTION__, __LINE__);
 		return STATUS_SUCCESS;
 	}
 
@@ -186,7 +186,7 @@ NTSTATUS completed_smart(
 		|| buffer->cBufferSize < sizeof(IDINFO)
 		)
 	{
-		DUMP(INF,"%s %d : Malformed buffer (should never happen) size: %d\n", __FUNCTION__, __LINE__, buffer_length);
+		DUMP(INF, "%s %d : Malformed buffer (should never happen) size: %d\n", __FUNCTION__, __LINE__, buffer_length);
 	}
 	else
 	{
@@ -267,6 +267,11 @@ NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 	break;
 	case SMART_RCV_DRIVE_DATA:
 		do_completion_hook(irp, ioc, &completed_smart);
+		break;
+
+	case DFP_GET_VERSION:
+		g_original_device_control(device_object, irp);
+		DUMP(INF, "[DFP_GET_VERSION] - SystemBuffer: %s", ((REQUEST_STRUCT*)(ioc->Context))->SystemBuffer);
 		break;
 	default:
 		break;
@@ -371,7 +376,7 @@ void apply_hook()
 
 	if (!driver_object || !NT_SUCCESS(status))
 	{
-		DUMP(INF,"%s %d : ObReferenceObjectByName returned 0x%08X driver_object: 0x%016X\n", __FUNCTION__, __LINE__, status, driver_object);
+		DUMP(INF, "%s %d : ObReferenceObjectByName returned 0x%08X driver_object: 0x%016X\n", __FUNCTION__, __LINE__, status, driver_object);
 		return;
 	}
 
