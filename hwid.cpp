@@ -43,7 +43,15 @@ enum DBG_LEVEL { INF = 0x0, WRN, ERR };
 PDRIVER_DISPATCH g_original_device_control;
 unsigned long long g_startup_time;
 
-#define  DFP_GET_VERSION          0x00074080
+#define DFP_GET_VERSION          0x00074080
+#define IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES 0x2d9404
+#define IOCTL_MOUNTDEV_QUERY_DEVICE_NAME 0x4d0008
+#define IOCTL_VOLUME_GET_GPT_ATTRIBUTES 0x560038
+#define IOCTL_STORAGE_GET_HOTPLUG_INFO 0x2d0c14
+#define IOCTL_STORAGE_QUERY_PROPERTY 0x2d1400
+#define SMART_GET_VERSION 0x74080
+#define IOCTL_DISK_GET_DRIVE_GEOMETRY 0x70000
+#define IOCTL_DISK_GET_LENGTH_INFO 0x7405c
 
 typedef struct _GETVERSIONOUTPARAMS
 {
@@ -55,8 +63,18 @@ typedef struct _GETVERSIONOUTPARAMS
 	DWORD dwReserved[4]; // For future use.
 } GETVERSIONOUTPARAMS, * PGETVERSIONOUTPARAMS, * LPGETVERSIONOUTPARAMS;
 
+typedef struct _MOUNTDEV_NAME {
+	USHORT NameLength;
+	WCHAR  Name[1];
+} MOUNTDEV_NAME, * PMOUNTDEV_NAME;
+
+
+
 // SPOOF SERIAL
 void spoof_serial(char* serial, bool is_smart);
+
+
+
 
 void SwapChars(char* str, int strLen = 0)
 {
@@ -268,9 +286,11 @@ NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 {
 	const auto ioc = IoGetCurrentIrpStackLocation(irp);
 
+	//DUMP(INF, "CTL_CODE %x", ioc->Parameters.DeviceIoControl.IoControlCode);
+
 	switch (ioc->Parameters.DeviceIoControl.IoControlCode)
 	{
-		DUMP(INF, "CTL_CODE %x", ioc->Parameters.DeviceIoControl.IoControlCode);
+		
 
 		case IOCTL_STORAGE_QUERY_PROPERTY:
 		{
@@ -285,6 +305,24 @@ NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 		case SMART_RCV_DRIVE_DATA:
 		{
 			do_completion_hook(irp, ioc, &completed_smart);
+			break;
+		}
+
+		case IOCTL_MOUNTDEV_QUERY_DEVICE_NAME:
+		{
+			PMOUNTDEV_NAME PtrMountedDeviceName;
+			UNICODE_STRING DeviceName;
+			PtrMountedDeviceName = (PMOUNTDEV_NAME)irp->AssociatedIrp.SystemBuffer;
+			
+			DUMP(INF, "[IOCTL_MOUNTDEV_QUERY_DEVICE_NAME] %c", PtrMountedDeviceName->Name);
+			break;
+		}
+		case IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES:
+		{
+			PDEVICE_MANAGE_DATA_SET_ATTRIBUTES_OUTPUT var;
+			var = (PDEVICE_MANAGE_DATA_SET_ATTRIBUTES_OUTPUT)irp->AssociatedIrp.SystemBuffer;
+			
+			DUMP(INF, "[PDEVICE_MANAGE_DATA_SET_ATTRIBUTES_OUTPUT] %d", var->Size);
 			break;
 		}
 
