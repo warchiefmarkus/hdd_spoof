@@ -288,15 +288,15 @@ NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 			break;
 		}
 
-		case DFP_GET_VERSION:
-		{
-			NTSTATUS result = g_original_device_control(device_object, irp);
-			DUMP(INF, "[DFP_GET_VERSION] - SystemBuffer->bVersion: %x", ((GETVERSIONOUTPARAMS*)(((REQUEST_STRUCT*)(ioc->Context))->SystemBuffer))->bVersion);
-			return result;
-			// g_original_device_control(device_object, irp);
-			// DUMP(INF, "[DFP_GET_VERSION] - SystemBuffer->bVersion: %x", ((GETVERSIONOUTPARAMS*)(((REQUEST_STRUCT*)(ioc->Context))->SystemBuffer))->bVersion);
-			//break;
-		}
+		//case DFP_GET_VERSION:
+		//{
+		//	NTSTATUS result = g_original_device_control(device_object, irp);
+		//	DUMP(INF, "[DFP_GET_VERSION] - SystemBuffer->bVersion: %x", ((GETVERSIONOUTPARAMS*)(((REQUEST_STRUCT*)(ioc->Context))->SystemBuffer))->bVersion);
+		//	return result;
+		//	 g_original_device_control(device_object, irp);
+		//	 DUMP(INF, "[DFP_GET_VERSION] - SystemBuffer->bVersion: %x", ((GETVERSIONOUTPARAMS*)(((REQUEST_STRUCT*)(ioc->Context))->SystemBuffer))->bVersion);
+		//	break;
+		//}
 
 		default:
 			break;
