@@ -43,6 +43,8 @@ enum DBG_LEVEL { INF = 0x0, WRN, ERR };
 PDRIVER_DISPATCH g_original_device_control;
 unsigned long long g_startup_time;
 
+#define  DFP_GET_VERSION          0x00074080
+
 // SPOOF SERIAL
 void spoof_serial(char* serial, bool is_smart);
 
@@ -279,84 +281,6 @@ NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 
 	return g_original_device_control(device_object, irp);
 }
-
-
-bool handle_disk_serials(PDEVICE_OBJECT device_object, RaidUnitRegisterInterfaces func)
-{
-	if (device_object == 0 || func == 0) return false;
-
-	while (device_object->NextDevice)
-	{
-		do
-		{
-			if (device_object->DeviceType == FILE_DEVICE_DISK)
-			{
-				PRAID_UNIT_EXTENSION extension = reinterpret_cast<PRAID_UNIT_EXTENSION>(device_object->DeviceExtension);
-				if (extension == 0)
-				{
-					n_log::printf("DeviceExtension buffer is null \n");
-					break;
-				}
-
-				unsigned short length = extension->_Identity.Identity.SerialNumber.Length;
-				if (length == 0)
-				{
-					n_log::printf("serial_number length is null \n");
-					break;
-				}
-
-				n_log::printf("old disk serial number : %s \n", extension->_Identity.Identity.SerialNumber.Buffer);
-				RtlCopyMemory(extension->_Identity.Identity.SerialNumber.Buffer, disk_serial_buffer, length);
-				//n_util::random_string(extension->_Identity.Identity.SerialNumber.Buffer, length);
-				n_log::printf("new disk serial number : %s \n", extension->_Identity.Identity.SerialNumber.Buffer);
-
-				extension->_Smart.Telemetry.SmartMask = 0;
-				func(extension);
-			}
-		} while (false);
-
-		device_object = device_object->NextDevice;
-	}
-
-	return true;
-}
-
-bool change_disk_serials()
-{
-	DWORD64 address = 0;
-	DWORD32 size = 0;
-	if (n_util::get_module_base_address("storport.sys", address, size) == false) return false;
-	n_log::printf("storport address : %llx \t size : %x \n", address, size);
-
-	RaidUnitRegisterInterfaces func = (RaidUnitRegisterInterfaces)n_util::find_pattern_image(address,
-		"\x48\x89\x5C\x24\x00\x55\x56\x57\x48\x83\xEC\x50",
-		"xxxx?xxxxxxx");// RaidUnitRegisterInterfaces
-	if (func == 0) return false;
-	n_log::printf("RaidUnitRegisterInterfaces address : %llx \n", func);
-
-	for (int i = 0; i < 5; i++)
-	{
-		const wchar_t* format = L"\\Device\\RaidPort%d";
-		wchar_t buffer[18]{ 0 };
-		RtlStringCbPrintfW(buffer, 18 * sizeof(wchar_t), format, i);
-
-		UNICODE_STRING raid_port;
-		RtlInitUnicodeString(&raid_port, buffer);
-
-		PFILE_OBJECT file_object = 0;
-		PDEVICE_OBJECT device_object = 0;
-		NTSTATUS status = IoGetDeviceObjectPointer(&raid_port, FILE_READ_DATA, &file_object, &device_object);
-		if (NT_SUCCESS(status))
-		{
-			handle_disk_serials(device_object->DriverObject->DeviceObject, func);
-
-			ObDereferenceObject(file_object);
-		}
-	}
-
-	return true;
-}
-
 
 // HOOK
 void apply_hook()
