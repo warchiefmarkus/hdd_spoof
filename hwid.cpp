@@ -270,32 +270,33 @@ NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 
 	switch (ioc->Parameters.DeviceIoControl.IoControlCode)
 	{
+		DUMP(INF, "CTL_CODE %x", ioc->Parameters.DeviceIoControl.IoControlCode);
 
-	case IOCTL_STORAGE_QUERY_PROPERTY:
-	{
-		const auto query = (PSTORAGE_PROPERTY_QUERY)irp->AssociatedIrp.SystemBuffer;
+		case IOCTL_STORAGE_QUERY_PROPERTY:
+		{
+			const auto query = (PSTORAGE_PROPERTY_QUERY)irp->AssociatedIrp.SystemBuffer;
 
-		if (query->PropertyId == StorageDeviceProperty)
-			do_completion_hook(irp, ioc, &completed_storage_query);
-		break;
-	}
+			if (query->PropertyId == StorageDeviceProperty)
+				do_completion_hook(irp, ioc, &completed_storage_query);
+			break;
+		}
 	
 
-	case SMART_RCV_DRIVE_DATA:
-	{
-		do_completion_hook(irp, ioc, &completed_smart);
-		break;
-	}
+		case SMART_RCV_DRIVE_DATA:
+		{
+			do_completion_hook(irp, ioc, &completed_smart);
+			break;
+		}
 
-	case DFP_GET_VERSION:
-	{
-		g_original_device_control(device_object, irp);
-		DUMP(INF, "[DFP_GET_VERSION] - SystemBuffer->bVersion: %x", ((GETVERSIONOUTPARAMS*)(((REQUEST_STRUCT*)(ioc->Context))->SystemBuffer))->bVersion);
-		break;
-	}
+		case DFP_GET_VERSION:
+		{
+			g_original_device_control(device_object, irp);
+			// DUMP(INF, "[DFP_GET_VERSION] - SystemBuffer->bVersion: %x", ((GETVERSIONOUTPARAMS*)(((REQUEST_STRUCT*)(ioc->Context))->SystemBuffer))->bVersion);
+			break;
+		}
 
-	default:
-		break;
+		default:
+			break;
 	}
 
 	return g_original_device_control(device_object, irp);
