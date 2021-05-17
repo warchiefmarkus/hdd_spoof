@@ -50,7 +50,7 @@
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <EnableInf2cat>false</EnableInf2cat>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
-    <OutDir>..\..\Documents\MegaTEST\hdd</OutDir>
+    <OutDir>..\..\..\Documents\MegaTEST\hdd</OutDir>
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
   </PropertyGroup>
@@ -69,10 +69,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ControlFlowGuard>false</ControlFlowGuard>
     </ClCompile>
-    <PostBuildEvent>
-      <Command>copy /Y "$(SolutionDir)$(PlatformShortName)\$(Configuration)\$(TargetFileName)" "C:\Users\Lion\Documents\MegaTEST\hdd\$(TargetFileName)"
-</Command>
-    </PostBuildEvent>
+    
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>

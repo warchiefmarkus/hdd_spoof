@@ -53,6 +53,8 @@ unsigned long long g_startup_time;
 #define IOCTL_DISK_GET_DRIVE_GEOMETRY 0x70000
 #define IOCTL_DISK_GET_LENGTH_INFO 0x7405c
 
+#define IOCTL_SCSI_MINIPORT				0x0004D008
+
 typedef struct _GETVERSIONOUTPARAMS
 {
 	BYTE bVersion;      // Binary driver version.
@@ -67,6 +69,51 @@ typedef struct _MOUNTDEV_NAME {
 	USHORT NameLength;
 	WCHAR  Name[1];
 } MOUNTDEV_NAME, * PMOUNTDEV_NAME;
+
+#pragma pack()
+typedef struct _SRB_IO_CONTROL
+{
+	ULONG HeaderLength;
+	UCHAR Signature[8];
+	ULONG Timeout;
+	ULONG ControlCode;
+	ULONG ReturnCode;
+	ULONG Length;
+} SRB_IO_CONTROL, * PSRB_IO_CONTROL;
+
+typedef struct _IDSECTOR
+{
+	USHORT wGenConfig;
+	USHORT wNumCyls;
+	USHORT wReserved;
+	USHORT wNumHeads;
+	USHORT wBytesPerTrack;
+	USHORT wBytesPerSector;
+	USHORT wSectorsPerTrack;
+	USHORT wVendorUnique[3];
+	CHAR sSerialNumber[20];
+	USHORT wBufferType;
+	USHORT wBufferSize;
+	USHORT wECCSize;
+	CHAR sFirmwareRev[8];
+	CHAR sModelNumber[40];
+	USHORT wMoreVendorUnique;
+	USHORT wDoubleWordIO;
+	USHORT wCapabilities;
+	USHORT wReserved1;
+	USHORT wPIOTiming;
+	USHORT wDMATiming;
+	USHORT wBS;
+	USHORT wNumCurrentCyls;
+	USHORT wNumCurrentHeads;
+	USHORT wNumCurrentSectorsPerTrack;
+	ULONG ulCurrentSectorCapacity;
+	USHORT wMultSectorStuff;
+	ULONG ulTotalAddressableSectors;
+	USHORT wSingleWordDMA;
+	USHORT wMultiWordDMA;
+	BYTE bReserved[128];
+} IDSECTOR, * PIDSECTOR;
 
 
 
@@ -173,12 +220,13 @@ NTSTATUS completed_storage_query(
 		{
 			const auto product = (char*)buffer + buffer->ProductIdOffset;
 			const auto serial = (char*)buffer + buffer->SerialNumberOffset;
-			DUMP(INF, "%s %d : Product: %s\n", __FUNCTION__, __LINE__, product);
-			DUMP(INF, "%s %d : Serial: %s\n", __FUNCTION__, __LINE__, serial);
+			//DUMP(INF, "%s %d : Product: %s\n", __FUNCTION__, __LINE__, product);
+			//DUMP(INF, "%s %d : Serial: %s\n", __FUNCTION__, __LINE__, serial);
 			spoof_param(product, "Samsung", false);
-			spoof_serial(serial, false);
-			DUMP(INF, "%s %d : Product Modified: %s\n", __FUNCTION__, __LINE__, product);
-			DUMP(INF, "%s %d : Serial Modified: %s\n", __FUNCTION__, __LINE__, serial);
+			spoof_param(serial, "00000000000000000002", false);
+			//spoof_serial(serial, false);
+			//DUMP(INF, "%s %d : Product Modified: %s\n", __FUNCTION__, __LINE__, product);
+			//DUMP(INF, "%s %d : Serial Modified: %s\n", __FUNCTION__, __LINE__, serial);
 		}
 	} while (false);
 
@@ -225,23 +273,24 @@ NTSTATUS completed_smart(
 		const auto storagedevdesc = (STORAGE_DEVICE_DESCRIPTOR*)buffer->bBuffer;
 		const auto serial = info->sSerialNumber;
 		const auto sFirmwareRev = info->sFirmwareRev;//(char*)storagedevdesc + storagedevdesc->ProductIdOffset;
-		DUMP(INF, "%s %d : FirmwareRev: %s\n", __FUNCTION__, __LINE__, info->sFirmwareRev);
-		DUMP(INF, "%s %d : ModelNumber: %s\n", __FUNCTION__, __LINE__, info->sModelNumber);
-		DUMP(INF, "%s %d : VendorUnique: %s\n", __FUNCTION__, __LINE__, info->wVendorUnique);
-		DUMP(INF, "%s %d : wMoreVendorUnique: %s\n", __FUNCTION__, __LINE__, info->wMoreVendorUnique);
+		//DUMP(INF, "%s %d : FirmwareRev: %s\n", __FUNCTION__, __LINE__, info->sFirmwareRev);
+		//DUMP(INF, "%s %d : ModelNumber: %s\n", __FUNCTION__, __LINE__, info->sModelNumber);
+		//DUMP(INF, "%s %d : VendorUnique: %s\n", __FUNCTION__, __LINE__, info->wVendorUnique);
+		//DUMP(INF, "%s %d : wMoreVendorUnique: %s\n", __FUNCTION__, __LINE__, info->wMoreVendorUnique);
 		info->sModelNumber[0] = 'M';
 		info->sModelNumber[1] = 'D';
 		info->sFirmwareRev[0] = 'M';
 		info->sFirmwareRev[1] = 'D';
 		info->wMoreVendorUnique = 'M';
-		DUMP(INF, "%s %d : FirmwareRev  Modified: %s\n", __FUNCTION__, __LINE__, info->sFirmwareRev);
-		DUMP(INF, "%s %d : ModelNumber  Modified: %s\n", __FUNCTION__, __LINE__, info->sModelNumber);
-		DUMP(INF, "%s %d : VendorUnique Modified: %s\n", __FUNCTION__, __LINE__, info->wVendorUnique);
+		//DUMP(INF, "%s %d : FirmwareRev  Modified: %s\n", __FUNCTION__, __LINE__, info->sFirmwareRev);
+		//DUMP(INF, "%s %d : ModelNumber  Modified: %s\n", __FUNCTION__, __LINE__, info->sModelNumber);
+		//DUMP(INF, "%s %d : VendorUnique Modified: %s\n", __FUNCTION__, __LINE__, info->wVendorUnique);
 
 
-		DUMP(INF, "%s %d : Serial20: %s\n", __FUNCTION__, __LINE__, serial);
-		spoof_serial(serial, true);
-		DUMP(INF, "%s %d : Serial21: %s\n", __FUNCTION__, __LINE__, serial);
+		//DUMP(INF, "%s %d : Serial20: %s\n", __FUNCTION__, __LINE__, serial);
+		//spoof_serial(serial, true);
+		spoof_param(serial, "00000000000000000002", false);
+		//DUMP(INF, "%s %d : Serial21: %s\n", __FUNCTION__, __LINE__, serial);
 	}
 
 	// I have no fucking idea why not calling the original doesnt cause problems but whatever
@@ -286,7 +335,7 @@ NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 {
 	const auto ioc = IoGetCurrentIrpStackLocation(irp);
 
-	//DUMP(INF, "CTL_CODE %x", ioc->Parameters.DeviceIoControl.IoControlCode);
+	DUMP(INF, "CTL_CODE %x", ioc->Parameters.DeviceIoControl.IoControlCode);
 
 	switch (ioc->Parameters.DeviceIoControl.IoControlCode)
 	{
@@ -295,7 +344,7 @@ NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 		case IOCTL_STORAGE_QUERY_PROPERTY:
 		{
 			const auto query = (PSTORAGE_PROPERTY_QUERY)irp->AssociatedIrp.SystemBuffer;
-
+			//DUMP(INF, "[IOCTL_STORAGE_QUERY_PROPERTY] query->PropertyId = %d", query->PropertyId);
 			if (query->PropertyId == StorageDeviceProperty)
 				do_completion_hook(irp, ioc, &completed_storage_query);
 			break;
@@ -308,24 +357,30 @@ NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 			break;
 		}
 
-		case IOCTL_MOUNTDEV_QUERY_DEVICE_NAME:
-		{
-			PMOUNTDEV_NAME PtrMountedDeviceName;
-			UNICODE_STRING DeviceName;
-			PtrMountedDeviceName = (PMOUNTDEV_NAME)irp->AssociatedIrp.SystemBuffer;
-			
-			DUMP(INF, "[IOCTL_MOUNTDEV_QUERY_DEVICE_NAME] %c", PtrMountedDeviceName->Name);
+		//case IOCTL_MOUNTDEV_QUERY_DEVICE_NAME:
+		//{
+		//	PMOUNTDEV_NAME PtrMountedDeviceName;
+		//	UNICODE_STRING DeviceName;
+		//	PtrMountedDeviceName = (PMOUNTDEV_NAME)irp->AssociatedIrp.SystemBuffer;
+		//	
+		//	DUMP(INF, "[IOCTL_MOUNTDEV_QUERY_DEVICE_NAME] %c", PtrMountedDeviceName->Name);
+		//	break;
+		//}
+		//case IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES:
+		//{
+		//	PDEVICE_MANAGE_DATA_SET_ATTRIBUTES_OUTPUT var;
+		//	var = (PDEVICE_MANAGE_DATA_SET_ATTRIBUTES_OUTPUT)irp->AssociatedIrp.SystemBuffer;
+		//	
+		//	DUMP(INF, "[PDEVICE_MANAGE_DATA_SET_ATTRIBUTES_OUTPUT] %d", var->Size);
+		//	break;
+		//}
+		case IOCTL_SCSI_MINIPORT:
+			//g_original_device_control(device_object, irp);
+			//SENDCMDOUTPARAMS* buff = (SENDCMDOUTPARAMS*)((char*)irp->AssociatedIrp.SystemBuffer + sizeof(SRB_IO_CONTROL));
+			//IDSECTOR* idsector = (IDSECTOR*)buff;
+			DUMP(INF,"[IOCTL_SCSI_MINIPORT] works ");
+			//return 0;
 			break;
-		}
-		case IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES:
-		{
-			PDEVICE_MANAGE_DATA_SET_ATTRIBUTES_OUTPUT var;
-			var = (PDEVICE_MANAGE_DATA_SET_ATTRIBUTES_OUTPUT)irp->AssociatedIrp.SystemBuffer;
-			
-			DUMP(INF, "[PDEVICE_MANAGE_DATA_SET_ATTRIBUTES_OUTPUT] %d", var->Size);
-			break;
-		}
-
 		//case DFP_GET_VERSION:
 		//{
 		//	NTSTATUS result = g_original_device_control(device_object, irp);
@@ -336,8 +391,8 @@ NTSTATUS hooked_device_control(PDEVICE_OBJECT device_object, PIRP irp)
 		//	break;
 		//}
 
-		default:
-			break;
+		//default:
+		//	break;
 	}
 
 	return g_original_device_control(device_object, irp);
